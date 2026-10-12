@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useDiario } from './contexto'
 
 export function Masthead({ nombre, lema, chico }: { nombre: string; lema?: string; chico?: boolean }) {
   return (
@@ -32,11 +33,12 @@ export function Campo(props: { etiqueta: string; valor: string; onChange: (v: st
 
 export function BottomBar() {
   const loc = useLocation()
+  const { slug } = useDiario()
   const cls = ({ isActive }: { isActive: boolean }) => (isActive ? 'activa' : '')
   return (
     <div className="bottombar">
       <nav>
-        <NavLink to="/" end className={cls}>Portada</NavLink>
+        <NavLink to={slug ? `/${slug}` : '/'} end className={cls}>Portada</NavLink>
         <NavLink to="/archivo" className={cls}>Archivo</NavLink>
         <NavLink to="/publicar" className="publicar" aria-label="Publicar" state={{ desde: loc.pathname }}>+</NavLink>
         <NavLink to="/avisos" className={cls}>Avisos</NavLink>
@@ -66,6 +68,11 @@ export function useCarga<T>(fn: () => Promise<T>, deps: unknown[]) {
   return { datos, error, cargando, recargar: () => cargar(true) }
 }
 
-export function Pagina({ children, completa }: { children: ReactNode; completa?: boolean }) {
-  return <main className={'hoja' + (completa ? ' completa' : '')}>{children}</main>
+export function Pagina({ children, completa, ancha }: { children: ReactNode; completa?: boolean; ancha?: boolean }) {
+  useEffect(() => {
+    if (!ancha) return
+    document.body.classList.add('portada-ancha')
+    return () => document.body.classList.remove('portada-ancha')
+  }, [ancha])
+  return <main className={'hoja' + (completa ? ' completa' : '') + (ancha ? ' ancha' : '')}>{children}</main>
 }

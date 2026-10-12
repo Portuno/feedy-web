@@ -106,13 +106,45 @@ img { display: block; max-width: 100%; }
 .fila { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .cargando { text-align: center; padding: 60px 0; font-style: italic; color: var(--tinta-suave); }
 
-@media (min-width: 900px) {
-  .hoja { max-width: 980px; padding-left: 32px; padding-right: 32px; }
-  .bottombar nav { max-width: 980px; }
-  .breves { grid-template-columns: repeat(2, 1fr); }
+.rotativa { display: block; }
+.carril.hueco { display: none; }
+.carril-vacio { font-style: italic; color: var(--tinta-suave); font-size: 15px; margin: 8px 0; }
+.carril .enmarcado { margin-left: 0; margin-right: 0; }
+
+@media (min-width: 421px) and (max-width: 1099px) {
+  .rotativa:has(.carril.color:not(.hueco)) {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    align-items: start;
+  }
+  .rotativa:has(.carril.color:not(.hueco)) > .carril.principal { padding-right: 14px; border-right: 1px solid var(--tinta); }
+  .rotativa:has(.carril.color:not(.hueco)) > .carril.color { padding-left: 14px; }
+  .rotativa > .carril.aviso,
+  .rotativa > .carril.breves { grid-column: 1 / -1; }
 }
 @media (max-width: 420px) {
-  .columnas { grid-template-columns: 1fr; }
-  .columnas > :first-child { padding-right: 0; border-right: 0; }
-  .columnas > :last-child { padding-left: 0; border-top: 1px solid var(--tinta); padding-top: 12px; margin-top: 8px; }
+  .carril.color:not(.hueco),
+  .carril.aviso:not(.hueco),
+  .carril.breves:not(.hueco) {
+    border-top: 1px solid var(--tinta);
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+}
+@media (min-width: 1100px) {
+  body.portada-ancha .hoja.ancha { max-width: 1180px; padding-left: 28px; padding-right: 28px; }
+  body.portada-ancha .bottombar nav { max-width: 1180px; }
+  .rotativa {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    align-items: start;
+  }
+  .rotativa > .carril {
+    padding: 0 14px 8px;
+    border-left: 1px solid var(--tinta);
+    min-height: 140px;
+  }
+  .rotativa > .carril.principal { border-left: 0; padding-left: 0; }
+  .rotativa > .carril.hueco { display: block; }
+  .carril.breves .breves { grid-template-columns: 1fr; }
 }

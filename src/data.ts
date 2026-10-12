@@ -9,7 +9,7 @@ const CLAVE_ACTIVO = 'feedy.diario'
 
 // ---------- Filas (Filas.kt) ----------
 export interface PerfilFila { id: string; nombre: string; avatar_url?: string | null; avisos_lectura: boolean; creado_en?: string | null }
-export interface DiarioFila { id: string; dueno_id: string; nombre: string; lema: string; ciudad: string; creado_en?: string | null }
+export interface DiarioFila { id: string; dueno_id: string; nombre: string; lema: string; ciudad: string; slug: string; creado_en?: string | null }
 export interface LectorFila { diario_id: string; lector_id: string; avisos_lectura?: boolean }
 export interface EdicionFila { id: string; diario_id: string; numero: number; fecha: string; turno: Turno; portada_nota_id?: string | null }
 export interface NotaFila {
@@ -31,7 +31,7 @@ export type TipoAviso = 'novedad' | 'idea' | 'propuesta'
 export type TipoPublicacion = 'nota' | 'color' | 'aviso'
 
 export interface Diario {
-  id: string; nombre: string; lema: string; ciudad: string; esPropio: boolean; creadoPor: string
+  id: string; slug: string; nombre: string; lema: string; ciudad: string; esPropio: boolean; creadoPor: string
   compartidoCon: string | null; leeTodasLasNoches: boolean; edicionesPublicadas: number; aplausosHoy: number; ultimaEdicionHace: string | null
 }
 export interface Edicion { id: string; diarioId: string; numero: number; fecha: string; turno: Turno; portadaNotaId: string | null }
@@ -185,7 +185,7 @@ export async function tablero(): Promise<Tablero> {
     const nIds = new Set(ns.map((n) => n.id))
     const ultima = ns.length ? Math.max(...ns.map((n) => aMillis(n.publicada_en))) : null
     return {
-      id: fila.id, nombre: fila.nombre, lema: fila.lema, ciudad: fila.ciudad, esPropio,
+      id: fila.id, slug: fila.slug, nombre: fila.nombre, lema: fila.lema, ciudad: fila.ciudad, esPropio,
       creadoPor: esPropio ? 'vos' : primerNombre(perfiles.get(fila.dueno_id)?.nombre ?? 'alguien'),
       compartidoCon: compartido,
       leeTodasLasNoches: lect.some((l) => l.avisos_lectura),
@@ -252,7 +252,7 @@ async function diarioDe(id: string): Promise<Diario> {
   const f = ok<DiarioFila[]>(await supabase.from('diarios').select('*').eq('id', id).limit(1))[0]
   if (!f) throw new Error('Ese diario no está en el archivo.')
   return {
-    id: f.id, nombre: f.nombre, lema: f.lema, ciudad: f.ciudad, esPropio: f.dueno_id === (await uid()),
+    id: f.id, slug: f.slug, nombre: f.nombre, lema: f.lema, ciudad: f.ciudad, esPropio: f.dueno_id === (await uid()),
     creadoPor: '', compartidoCon: null, leeTodasLasNoches: false, edicionesPublicadas: 0, aplausosHoy: 0, ultimaEdicionHace: null,
   }
 }
@@ -463,6 +463,62 @@ export async function canjear(codigo: string): Promise<string> {
 }
 
 // ---------- Tiempo real (TiempoReal.kt) ----------
+export async function slugDe(id: string): Promise<string | null> {
+  const fila = ok<{ slug: string }[]>(await supabase.from('diarios').select('slug').eq('id', id).limit(1))[0]
+  return fila?.slug ?? null
+}
+
+export async function buscarPorSlug(slug: string): Promise<{ id: string; slug: string } | null> {
+  const limpio = slug.trim().toLowerCase()
+  if (!limpio) return null
+  const fila = ok<{ id: string; slug: string }[]>(await supabase.from('diarios').select('id,slug').eq('slug', limpio).limit(1))[0]
+  return fila ?? null
+}
+
+// ---------- Web Push ----------
+export type EstadoPush = 'no' | 'off' | 'denegado' | 'on'
+
+function claveVapid(base64: string): Uint8Array {
+  const pad = '='.repeat((4 - (base64.length % 4)) % 4)
+  const raw = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'))
+  const out = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i)
+  return out
+}
+
+export async function estadoPush(): Promise<EstadoPush> {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'no'
+  if (Notification.permission === 'denied') return 'denegado'
+  const reg = await navigator.serviceWorker.getRegistration()
+  const sub = await reg?.pushManager.getSubscription()
+  return sub ? 'on' : 'off'
+}
+
+export async function activarPush(): Promise<void> {
+  const key = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim()
+  if (!key) throw new Error('Falta la clave pública de avisos (VITE_VAPID_PUBLIC_KEY).')
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) throw new Error('Este navegador no avisa con la página cerrada.')
+  const permiso = await Notification.requestPermission()
+  if (permiso !== 'granted') throw new Error('El navegador no dejó activar los avisos.')
+  const reg = await navigator.serviceWorker.register('/sw.js')
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveVapid(key) as BufferSource })
+  const json = sub.toJSON()
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) throw new Error('No pude guardar el aviso en este navegador.')
+  ok(await supabase.from('push_suscripciones').upsert(
+    { usuario_id: await uid(), endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth },
+    { onConflict: 'usuario_id,endpoint' },
+  ))
+}
+
+export async function cortarPush(): Promise<void> {
+  const reg = await navigator.serviceWorker.getRegistration()
+  const sub = await reg?.pushManager.getSubscription()
+  if (!sub) return
+  const endpoint = sub.endpoint
+  await sub.unsubscribe()
+  ok(await supabase.from('push_suscripciones').delete().eq('usuario_id', await uid()).eq('endpoint', endpoint))
+}
+
 export function escuchar(diarioId: string, alCambiar: () => void): () => void {
   const canal = supabase
     .channel(`feedy-web-${diarioId}-${Math.random().toString(36).slice(2, 8)}`)

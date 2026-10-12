@@ -25,6 +25,7 @@ export default function Editar() {
       <Campo etiqueta="Nombre de tu diario" valor={nombre} onChange={setNombre} />
       <Campo etiqueta="Lema" valor={lema} onChange={setLema} />
       <Campo etiqueta="Ciudad" valor={ciudad} onChange={setCiudad} />
+      {propio.slug && <p className="epigrafe">La dirección queda fija: {location.origin}/{propio.slug}</p>}
       {err && <ErrorCaja mensaje={err} />}
       <button className="boton-tinta" disabled={!nombre.trim()} onClick={guardar}>Guardar</button>
     </Pagina>

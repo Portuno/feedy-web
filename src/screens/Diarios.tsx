@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { avisosLectura, canjear, crearInvitacion, salir, tablero, type Diario } from '../data'
+import { activarPush, avisosLectura, canjear, cortarPush, crearInvitacion, estadoPush, salir, slugDe, tablero, type Diario, type EstadoPush } from '../data'
 import { useDiario } from '../contexto'
 import { BottomBar, Cargando, ErrorCaja, FileteDoble, Masthead, Pagina, useCarga } from '../ui'
 
@@ -24,11 +24,15 @@ export default function Diarios() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [canje, setCanje] = useState('')
   const [err, setErr] = useState<string | null>(null)
+  const [push, setPush] = useState<EstadoPush | 'cargando'>('cargando')
+  const [pushOcupado, setPushOcupado] = useState(false)
+
+  useEffect(() => { estadoPush().then(setPush).catch(() => setPush('no')) }, [])
 
   if (cargando && !datos) return <><Cargando /><BottomBar /></>
   if (!datos) return <Pagina><ErrorCaja mensaje={error ?? 'No pude cargar tus diarios.'} /><BottomBar /></Pagina>
   const { propio, lecturas, corresponsal } = datos
-  const abrir = (id: string) => { elegir(id); nav('/') }
+  const abrir = (d: Diario) => { elegir(d.id, d.slug); nav(`/${d.slug}`) }
 
   async function invitar() {
     if (!propio) return
@@ -36,7 +40,8 @@ export default function Diarios() {
     try {
       const c = await crearInvitacion(propio.id)
       setCodigo(c)
-      const texto = `Te invito a leer ${propio.nombre}. Abrí la app, andá a Mis diarios → Leer un diario y escribí el código ${c}.`
+      const url = `${location.origin}/${propio.slug}`
+      const texto = `Te invito a leer ${propio.nombre}. Entrá en ${url} con tu cuenta y, si todavía no lo leés, escribí el código ${c}.`
       if (navigator.share) { await navigator.share({ title: propio.nombre, text: texto }).catch(() => {}) }
       else { await navigator.clipboard.writeText(texto); setAviso('Copiamos la invitación. Pegala donde quieras.') }
     } catch (e) { setErr((e as Error).message) }
@@ -44,7 +49,24 @@ export default function Diarios() {
 
   async function leer() {
     setErr(null)
-    try { const id = await canjear(canje); setCanje(''); abrir(id) } catch (e) { setErr((e as Error).message) }
+    try {
+      const id = await canjear(canje)
+      const s = await slugDe(id)
+      setCanje('')
+      if (!s) throw new Error('Ese diario todavía no tiene dirección.')
+      elegir(id, s)
+      nav(`/${s}`)
+    } catch (e) { setErr((e as Error).message) }
+  }
+
+  async function cambiarPush(quiere: boolean) {
+    setErr(null)
+    setPushOcupado(true)
+    try {
+      if (quiere) { await activarPush(); setPush('on') }
+      else { await cortarPush(); setPush('off') }
+    } catch (e) { setErr((e as Error).message); setPush(await estadoPush().catch(() => 'off' as EstadoPush)) }
+    finally { setPushOcupado(false) }
   }
 
   return (
@@ -64,13 +86,14 @@ export default function Diarios() {
       <p className="etiqueta">Tu diario</p>
       {propio && (
         <>
-          <Tarjeta d={propio} alAbrir={() => abrir(propio.id)} />
+          <Tarjeta d={propio} alAbrir={() => abrir(propio)} />
+          <p className="epigrafe" style={{ textAlign: 'center' }}>{location.host}/{propio.slug}</p>
           <p className="epigrafe">{propio.compartidoCon ? `Lo lee ${propio.compartidoCon}.` : 'Todavía no lo lee nadie.'}</p>
           <div className="fila">
             <button className="boton-linea" style={{ flex: 1 }} onClick={invitar}>Invitar a leer</button>
             <Link className="boton-linea" style={{ flex: 1 }} to="/diarios/editar">Editar</Link>
           </div>
-          {codigo && <div className="recuadro" style={{ textAlign: 'center' }}><span className="etiqueta">Código de invitación</span><h2 className="titular" style={{ letterSpacing: '.2em' }}>{codigo}</h2><p className="epigrafe">Vale una vez, por 30 días.</p></div>}
+          {codigo && <div className="recuadro" style={{ textAlign: 'center' }}><span className="etiqueta">Código de invitación</span><h2 className="titular" style={{ letterSpacing: '.2em' }}>{codigo}</h2><p className="epigrafe">{location.origin}/{propio.slug}</p><p className="epigrafe">Vale una vez, por 30 días.</p></div>}
           {aviso && <p className="epigrafe">{aviso}</p>}
         </>
       )}
@@ -78,7 +101,7 @@ export default function Diarios() {
       <FileteDoble />
       <p className="etiqueta">Diarios que leés</p>
       {lecturas.length === 0 && <p className="epigrafe">Todavía no leés ningún diario.</p>}
-      {lecturas.map((d) => <Tarjeta key={d.id} d={d} alAbrir={() => abrir(d.id)} />)}
+      {lecturas.map((d) => <Tarjeta key={d.id} d={d} alAbrir={() => abrir(d)} />)}
 
       <div className="punteado">
         <span className="etiqueta">+ Leer un diario</span>
@@ -94,6 +117,26 @@ export default function Diarios() {
       <label className="fila" style={{ margin: '12px 0' }}>
         <span><span className="etiqueta">Avisos de lectura</span><br /><span className="epigrafe">Que sepan cuándo leíste su nota.</span></span>
         <input type="checkbox" checked={corresponsal.avisosLectura} onChange={async (e) => { await avisosLectura(e.target.checked).catch((x) => setErr(x.message)); recargar() }} />
+      </label>
+      <label className="fila" style={{ margin: '12px 0' }}>
+        <span>
+          <span className="etiqueta">Avisame cuando haya edición</span><br />
+          <span className="epigrafe">
+            {push === 'on'
+              ? 'Activado en este navegador. Llega aunque la página esté cerrada.'
+              : push === 'no'
+                ? 'Este navegador no avisa con la página cerrada.'
+                : push === 'denegado'
+                  ? 'El navegador bloqueó los avisos. Habilitalos en el candado de la barra.'
+                  : 'Llega aunque tengas la página cerrada. En el iPhone, solo si el sitio está en el inicio.'}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={push === 'on'}
+          disabled={push === 'no' || push === 'denegado' || push === 'cargando' || pushOcupado}
+          onChange={(e) => cambiarPush(e.target.checked)}
+        />
       </label>
       <button className="link" onClick={() => salir()}>Cerrar sesión</button>
       <BottomBar />

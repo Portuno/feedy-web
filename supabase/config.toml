@@ -1,0 +1,4 @@
+# La función valida el secreto del webhook (o la service role).
+# Sin verify_jwt = false, el gateway pide un JWT de usuario y el webhook no entra.
+[functions.avisar-edicion]
+verify_jwt = false

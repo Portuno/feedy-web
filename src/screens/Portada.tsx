@@ -119,7 +119,7 @@ export default function Portada() {
               {nota.epigrafe && <p className="epigrafe">{nota.epigrafe}</p>}
               <Link to={`/nota/${nota.id}`}><Cuerpo texto={nota.entradilla} capitular /></Link>
               <div className="acciones">
-                <Link to={`/nota/${nota.id}`} className={nota.aplaudido ? 'activo' : ''}>👏 {nota.aplausos}</Link>
+                <Link to={`/nota/${nota.id}`} className={nota.aplaudido ? 'activo' : ''}>Aplausos · {nota.aplausos}</Link>
                 <Link to={`/nota/${nota.id}#cartas`}>{rotulo(cartas, 'carta', 'cartas')}</Link>
                 <Link to={`/nota/${nota.id}`}>Leer nota</Link>
               </div>

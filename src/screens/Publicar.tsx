@@ -64,7 +64,7 @@ export default function Publicar() {
         </div>
       )}
       <div className="recuadro" style={{ textAlign: 'center' }}>
-        {preview ? <img className="foto" src={preview} alt="" style={{ marginBottom: 10 }} /> : <p className="epigrafe">La foto es lo único a color.</p>}
+        {preview ? <img className="foto" src={preview} alt="" style={{ marginBottom: 10 }} /> : <p className="epigrafe">Sale en blanco y negro.</p>}
         <label className="boton-linea" style={{ cursor: 'pointer' }}>
           {foto ? 'Cambiar' : 'Agregar foto'}
           <input type="file" accept="image/*" hidden onChange={(e) => setFoto(e.target.files?.[0] ?? null)} />

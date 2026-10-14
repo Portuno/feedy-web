@@ -51,7 +51,7 @@ export default function NotaScreen() {
       </div>
       <div className="acciones">
         <button className={nota.aplaudido ? 'activo' : ''} onClick={toggle}>
-          👏 {nota.aplaudido ? 'Aplaudiste' : 'Aplaudir'} · {nota.aplausos}
+          {nota.aplaudido ? 'Aplaudiste' : 'Aplausos'} · {nota.aplausos}
         </button>
         <a href="#cartas">{rotulo(cartas.length, 'carta', 'cartas')}</a>
       </div>

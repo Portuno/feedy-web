@@ -131,7 +131,7 @@ export default function Portada() {
           {color ? (
             <>
               <p className="etiqueta">Nota de color</p>
-              {color.fotoUrl && <img className="foto" src={color.fotoUrl} alt="" style={{ aspectRatio: '1' }} />}
+              {color.fotoUrl && <img className="foto" src={color.fotoUrl} alt="" />}
               <h3 className="titular chico">{color.titulo}</h3>
               <Cuerpo texto={color.entradilla} />
             </>

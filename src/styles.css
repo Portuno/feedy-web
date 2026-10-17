@@ -66,8 +66,8 @@ img { display: block; max-width: 100%; filter: grayscale(1) contrast(1.06); }
 .columnas { display: grid; grid-template-columns: 1.6fr 1fr; gap: 0; }
 .columnas > :first-child { padding-right: 14px; border-right: 1px solid var(--tinta); }
 .columnas > :last-child { padding-left: 14px; }
-.foto { width: 100%; height: auto; object-fit: cover; background: var(--papel-oscuro); border: 1px solid var(--tinta); outline: 1px solid var(--tinta); outline-offset: 3px; }
-.foto.ancha { aspect-ratio: 16 / 10; }
+.foto { width: 100%; height: auto; object-fit: contain; background: var(--papel-oscuro); border: 1px solid var(--tinta); outline: 1px solid var(--tinta); outline-offset: 3px; }
+.foto.ancha { aspect-ratio: auto; }
 .cuerpo p { margin: 0 0 12px; text-align: justify; hyphens: auto; }
 .cuerpo.capitular > p:first-child::first-letter { font-family: var(--titular); font-weight: 900; float: left; font-size: 64px; line-height: .85; padding: 4px 8px 0 0; }
 
@@ -81,7 +81,7 @@ img { display: block; max-width: 100%; filter: grayscale(1) contrast(1.06); }
 .punteado { border: 1px dashed var(--tinta); padding: 18px; text-align: center; margin: 18px 0; display: block; width: 100%; }
 
 .breves { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.breves .foto { aspect-ratio: 4/3; margin-bottom: 6px; }
+.breves .foto { margin-bottom: 6px; }
 
 .boton-tinta { display: block; width: 100%; background: var(--tinta); color: var(--papel); padding: 14px; font-family: var(--etiqueta); font-weight: 500; letter-spacing: .18em; text-transform: uppercase; font-size: 14px; border: 1px solid var(--tinta); text-align: center; }
 .boton-tinta:disabled { opacity: .35; cursor: default; }

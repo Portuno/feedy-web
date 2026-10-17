@@ -9,7 +9,7 @@ const CLAVE_ACTIVO = 'feedy.diario'
 
 // ---------- Filas (Filas.kt) ----------
 export interface PerfilFila { id: string; nombre: string; avatar_url?: string | null; avisos_lectura: boolean; creado_en?: string | null }
-export interface DiarioFila { id: string; dueno_id: string; nombre: string; lema: string; ciudad: string; slug: string; creado_en?: string | null }
+export interface DiarioFila { id: string; dueno_id: string; nombre: string; lema: string; ciudad: string; slug?: string | null; creado_en?: string | null }
 export interface LectorFila { diario_id: string; lector_id: string; avisos_lectura?: boolean }
 export interface EdicionFila { id: string; diario_id: string; numero: number; fecha: string; turno: Turno; portada_nota_id?: string | null }
 export interface NotaFila {
@@ -67,6 +67,12 @@ export function traducir(m: string): string {
 }
 const esDuplicado = (e: { message?: string; code?: string } | null) =>
   !!e && (e.code === '23505' || /duplicate/i.test(e.message ?? ''))
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+/** La columna slug puede no estar aplicada todavía. Sin ella, la dirección es el id. */
+function direccion(fila: { id: string; slug?: string | null }): string {
+  const s = fila.slug?.trim()
+  return s || fila.id
+}
 
 let uidActual: string | null = null
 supabase.auth.onAuthStateChange((_e, s) => { uidActual = s?.user.id ?? null })
@@ -185,7 +191,7 @@ export async function tablero(): Promise<Tablero> {
     const nIds = new Set(ns.map((n) => n.id))
     const ultima = ns.length ? Math.max(...ns.map((n) => aMillis(n.publicada_en))) : null
     return {
-      id: fila.id, slug: fila.slug, nombre: fila.nombre, lema: fila.lema, ciudad: fila.ciudad, esPropio,
+      id: fila.id, slug: direccion(fila), nombre: fila.nombre, lema: fila.lema, ciudad: fila.ciudad, esPropio,
       creadoPor: esPropio ? 'vos' : primerNombre(perfiles.get(fila.dueno_id)?.nombre ?? 'alguien'),
       compartidoCon: compartido,
       leeTodasLasNoches: lect.some((l) => l.avisos_lectura),
@@ -252,7 +258,7 @@ async function diarioDe(id: string): Promise<Diario> {
   const f = ok<DiarioFila[]>(await supabase.from('diarios').select('*').eq('id', id).limit(1))[0]
   if (!f) throw new Error('Ese diario no está en el archivo.')
   return {
-    id: f.id, slug: f.slug, nombre: f.nombre, lema: f.lema, ciudad: f.ciudad, esPropio: f.dueno_id === (await uid()),
+    id: f.id, slug: direccion(f), nombre: f.nombre, lema: f.lema, ciudad: f.ciudad, esPropio: f.dueno_id === (await uid()),
     creadoPor: '', compartidoCon: null, leeTodasLasNoches: false, edicionesPublicadas: 0, aplausosHoy: 0, ultimaEdicionHace: null,
   }
 }
@@ -464,14 +470,23 @@ export async function canjear(codigo: string): Promise<string> {
 
 // ---------- Tiempo real (TiempoReal.kt) ----------
 export async function slugDe(id: string): Promise<string | null> {
-  const fila = ok<{ slug: string }[]>(await supabase.from('diarios').select('slug').eq('id', id).limit(1))[0]
-  return fila?.slug ?? null
+  const fila = ok<DiarioFila[]>(await supabase.from('diarios').select('*').eq('id', id).limit(1))[0]
+  return fila ? direccion(fila) : null
 }
 
 export async function buscarPorSlug(slug: string): Promise<{ id: string; slug: string } | null> {
   const limpio = slug.trim().toLowerCase()
   if (!limpio) return null
-  const fila = ok<{ id: string; slug: string }[]>(await supabase.from('diarios').select('id,slug').eq('slug', limpio).limit(1))[0]
+  if (UUID.test(limpio)) {
+    const fila = ok<{ id: string }[]>(await supabase.from('diarios').select('id').eq('id', limpio).limit(1))[0]
+    return fila ? { id: fila.id, slug: limpio } : null
+  }
+  const { data, error } = await supabase.from('diarios').select('id,slug').eq('slug', limpio).limit(1)
+  if (error) {
+    if (/slug/i.test(error.message) && /does not exist|no existe/i.test(error.message)) return null
+    throw new Error(traducir(error.message))
+  }
+  const fila = (data ?? [])[0] as { id: string; slug: string } | undefined
   return fila ?? null
 }
 

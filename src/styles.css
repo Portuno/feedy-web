@@ -5,7 +5,7 @@
 @font-face { font-family: 'Oswald'; src: url('/fonts/oswald.ttf') format('truetype'); font-weight: 200 700; font-display: swap; }
 
 :root {
-  --papel: #F3F3F1; --papel-claro: #FFFFFF; --papel-oscuro: #E2E2E0; --tinta: #111111; --tinta-suave: #5C5C5C;
+  --papel: #ECE6D6; --papel-claro: #F7F3EA; --papel-oscuro: #DDD6C6; --tinta: #111111; --tinta-suave: #5C5C5C;
   --gotica: 'UnifrakturCook', serif; --titular: 'Playfair Display', Georgia, serif;
   --cuerpo: 'Libre Caslon Text', Georgia, serif; --etiqueta: 'Oswald', 'Arial Narrow', sans-serif;
   color-scheme: light only;
@@ -29,10 +29,12 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background-color: var(--papel);
-  background-image: radial-gradient(ellipse at center, rgba(243,243,241,0) 55%, rgba(17,17,17,.18) 100%), url('/paper_texture.png');
+  background-image:
+    radial-gradient(ellipse at center, rgba(236,230,214,0) 48%, rgba(48,36,18,.18) 100%),
+    url('/paper_texture.png');
+  background-repeat: no-repeat, repeat;
   background-attachment: fixed;
-  background-size: 100% 100%, 512px;
-  filter: grayscale(1);
+  background-size: 100% 100%, 480px;
 }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
@@ -53,6 +55,7 @@ img { display: block; max-width: 100%; filter: grayscale(1) contrast(1.06); }
 .etiqueta, .kicker { font-family: var(--etiqueta); font-weight: 500; text-transform: uppercase; letter-spacing: .14em; font-size: 12px; }
 .suave { color: var(--tinta-suave); }
 .fila-edicion { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.fila-edicion a { text-decoration: underline; text-underline-offset: 3px; }
 .kicker { display: flex; justify-content: space-between; gap: 8px; margin: 14px 0 6px; }
 .kicker .leido { border: 1px solid var(--tinta); padding: 0 6px; }
 
@@ -103,7 +106,7 @@ img { display: block; max-width: 100%; filter: grayscale(1) contrast(1.06); }
 .topbar { display: grid; grid-template-columns: 70px 1fr 70px; align-items: center; border-bottom: 1px solid var(--tinta); padding-bottom: 8px; margin-bottom: 12px; }
 .topbar > :last-child { text-align: right; }
 
-.bottombar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--papel); border-top: 3px solid var(--tinta); z-index: 10; padding-bottom: env(safe-area-inset-bottom); }
+.bottombar { position: fixed; left: 0; right: 0; bottom: 0; background-color: var(--papel); background-image: url('/paper_texture.png'); background-size: 480px; border-top: 3px solid var(--tinta); z-index: 10; padding-bottom: env(safe-area-inset-bottom); }
 .bottombar::before { content: ''; display: block; height: 4px; border-bottom: 1px solid var(--tinta); }
 .bottombar nav { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; height: 64px; }
 .bottombar a { text-align: center; font-family: var(--etiqueta); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; font-size: 10px; color: var(--tinta-suave); padding: 6px 0; }
@@ -114,6 +117,8 @@ img { display: block; max-width: 100%; filter: grayscale(1) contrast(1.06); }
 .chip.activa { background: var(--tinta); color: var(--papel); }
 .vacio { text-align: center; padding: 40px 10px; }
 .error { border: 1px solid var(--tinta); padding: 10px; font-style: italic; margin: 12px 0; background: var(--papel-claro); }
+.hemeroteca a { display: block; border-top: 1px solid var(--tinta); padding: 14px 0 4px; }
+.hemeroteca a:last-child { border-bottom: 1px solid var(--tinta); }
 .carta { border-top: 1px solid var(--tinta); padding: 10px 0; }
 .carta p { margin: 0 0 4px; font-style: italic; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; border-top: 1px solid var(--tinta); border-bottom: 1px solid var(--tinta); margin: 12px 0; }
@@ -156,6 +161,7 @@ img { display: block; max-width: 100%; filter: grayscale(1) contrast(1.06); }
     grid-template-columns: 2fr 1fr 1fr 1fr;
     align-items: start;
   }
+  .rotativa.archivo { grid-template-columns: 2fr 1fr 1fr; }
   .rotativa > .carril {
     padding: 0 14px 8px;
     border-left: 1px solid var(--tinta);

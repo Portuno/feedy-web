@@ -303,19 +303,24 @@ function avisoDe(f: AvisoFila, perfiles: Map<string, string>, firmadas: Map<stri
   }
 }
 
-async function ultimaEdicion(diarioId: string): Promise<Edicion | null> {
-  const f = ok<EdicionFila[]>(await supabase.from('ediciones').select('*').eq('diario_id', diarioId).order('fecha', { ascending: false }).limit(1))[0]
-  return f ? { id: f.id, diarioId: f.diario_id, numero: f.numero, fecha: f.fecha.slice(0, 10), turno: f.turno, portadaNotaId: f.portada_nota_id ?? null } : null
+function aEdicion(f: EdicionFila): Edicion {
+  return { id: f.id, diarioId: f.diario_id, numero: f.numero, fecha: f.fecha.slice(0, 10), turno: f.turno, portadaNotaId: f.portada_nota_id ?? null }
 }
 
-export async function cargarPortada(diarioId: string): Promise<PortadaDatos> {
-  const diario = await diarioDe(diarioId)
-  const edicion = await ultimaEdicion(diarioId)
-  const yo = await uid()
-  const avFilas = ok<AvisoFila[]>(await supabase.from('avisos').select('*').eq('diario_id', diarioId).order('publicado_en', { ascending: false }).limit(1))
-  const aviso = avFilas[0]
-    ? avisoDe(avFilas[0], await nombres([avFilas[0].autor_id]), await firmar(avFilas.map((a) => a.foto_url).filter(Boolean) as string[]), true, yo, [])
-    : null
+async function ultimaEdicion(diarioId: string): Promise<Edicion | null> {
+  const f = ok<EdicionFila[]>(await supabase.from('ediciones').select('*').eq('diario_id', diarioId).order('fecha', { ascending: false }).limit(1))[0]
+  return f ? aEdicion(f) : null
+}
+
+async function armarPortada(diario: Diario, edicion: Edicion | null, conAviso: boolean): Promise<PortadaDatos> {
+  let aviso: Aviso | null = null
+  if (conAviso) {
+    const yo = await uid()
+    const avFilas = ok<AvisoFila[]>(await supabase.from('avisos').select('*').eq('diario_id', diario.id).order('publicado_en', { ascending: false }).limit(1))
+    aviso = avFilas[0]
+      ? avisoDe(avFilas[0], await nombres([avFilas[0].autor_id]), await firmar(avFilas.map((a) => a.foto_url).filter(Boolean) as string[]), true, yo, [])
+      : null
+  }
   if (!edicion) return { diario, edicion: null, nota: null, color: null, aviso, breves: [], cartas: 0 }
   const filas = ok<NotaFila[]>(await supabase.from('notas').select('*').eq('edicion_id', edicion.id).order('publicada_en', { ascending: false }))
   const armadas = await armarNotas(filas, diario.ciudad)
@@ -325,6 +330,34 @@ export async function cargarPortada(diarioId: string): Promise<PortadaDatos> {
   const breves = armadas.filter((n) => n.id !== principal?.id && n.id !== color?.id).slice(0, 2).map((n) => ({ id: n.id, titulo: n.titulo, fotoUrl: n.fotoUrl }))
   const cartas = principal ? ok<{ id: string }[]>(await supabase.from('cartas').select('id').eq('nota_id', principal.id)).length : 0
   return { diario, edicion, nota: principal, color, aviso, breves, cartas }
+}
+
+export async function cargarPortada(diarioId: string): Promise<PortadaDatos> {
+  const diario = await diarioDe(diarioId)
+  return armarPortada(diario, await ultimaEdicion(diarioId), true)
+}
+
+export interface LineaArchivo { edicion: Edicion; titular: string | null; notas: number }
+
+export async function listarArchivo(diarioId: string): Promise<{ diario: Diario; lineas: LineaArchivo[] }> {
+  const diario = await diarioDe(diarioId)
+  const filas = ok<EdicionFila[]>(await supabase.from('ediciones').select('*').eq('diario_id', diarioId).order('fecha', { ascending: false }).order('numero', { ascending: false }))
+  if (!filas.length) return { diario, lineas: [] }
+  const notas = ok<{ id: string; edicion_id: string | null; titulo: string; tipo: string }[]>(
+    await supabase.from('notas').select('id,edicion_id,titulo,tipo').in('edicion_id', filas.map((f) => f.id)),
+  )
+  const lineas = filas.map((f) => {
+    const ns = notas.filter((n) => n.edicion_id === f.id)
+    const portada = ns.find((n) => n.id === f.portada_nota_id) ?? ns.find((n) => n.tipo !== 'color') ?? ns[0]
+    return { edicion: aEdicion(f), titular: portada?.titulo ?? null, notas: ns.length }
+  })
+  return { diario, lineas }
+}
+
+export async function cargarEdicion(edicionId: string): Promise<PortadaDatos | null> {
+  const f = ok<EdicionFila[]>(await supabase.from('ediciones').select('*').eq('id', edicionId).limit(1))[0]
+  if (!f) return null
+  return armarPortada(await diarioDe(f.diario_id), aEdicion(f), false)
 }
 
 export async function cargarNota(notaId: string): Promise<NotaVista | null> {

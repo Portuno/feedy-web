@@ -75,6 +75,7 @@ export default function App() {
         <Route path="/diarios" element={<Diarios />} />
         <Route path="/diarios/editar" element={<Editar />} />
         <Route path="/archivo" element={<Archivo />} />
+        <Route path="/archivo/:id" element={<Archivo />} />
         <Route path="/:slug" element={<Portada />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

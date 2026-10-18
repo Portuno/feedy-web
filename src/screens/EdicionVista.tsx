@@ -6,6 +6,8 @@ import { AvisoEnmarcado } from './Avisos'
 
 export function EdicionVista({ datos, archivo }: { datos: PortadaDatos; archivo?: boolean }) {
   const { diario, edicion, nota, color, aviso, breves, cartas } = datos
+  const avisoPortada = archivo ? null : aviso
+  const piezas = 1 + (color ? 1 : 0) + (avisoPortada ? 1 : 0) + (breves.length ? 1 : 0)
   return (
     <>
       <Masthead nombre={diario.nombre} lema={diario.lema} />
@@ -21,7 +23,7 @@ export function EdicionVista({ datos, archivo }: { datos: PortadaDatos; archivo?
       </div>
       <FileteDoble />
 
-      <div className={'rotativa' + (archivo ? ' archivo' : '')}>
+      <div className={'rotativa n-' + piezas + (archivo ? ' archivo' : '')}>
         <article className="carril principal">
           {!nota ? (
             <div className="vacio">
@@ -51,7 +53,11 @@ export function EdicionVista({ datos, archivo }: { datos: PortadaDatos; archivo?
               <Link to={`/nota/${nota.id}`}><h2 className="titular">{nota.titulo}</h2></Link>
               {nota.bajada && <p className="bajada">{nota.bajada}</p>}
               <p className="firma">{firmaDe(nota.autor, nota.ciudad, hace(nota.publicadaEn))}</p>
-              {nota.fotoUrl && <Link to={`/nota/${nota.id}`}><img className="foto ancha" src={nota.fotoUrl} alt="" /></Link>}
+              {nota.fotoUrl && (
+                <Link to={`/nota/${nota.id}`} className="foto-marco">
+                  <img className="foto ancha" src={nota.fotoUrl} alt="" />
+                </Link>
+              )}
               {nota.epigrafe && <p className="epigrafe">{nota.epigrafe}</p>}
               <Link to={`/nota/${nota.id}`}><Cuerpo texto={nota.entradilla} capitular /></Link>
               <div className="acciones">
@@ -63,38 +69,34 @@ export function EdicionVista({ datos, archivo }: { datos: PortadaDatos; archivo?
           )}
         </article>
 
-        <aside className={'carril color' + (color ? '' : ' hueco')}>
-          {color ? (
-            <>
-              <p className="etiqueta">Nota de color</p>
-              {color.fotoUrl && <img className="foto" src={color.fotoUrl} alt="" style={{ aspectRatio: '1' }} />}
-              <h3 className="titular chico">{color.titulo}</h3>
-              <Cuerpo texto={color.entradilla} />
-            </>
-          ) : <p className="carril-vacio">En esta edición no hay nota de color.</p>}
-        </aside>
-
-        {!archivo && (
-          <aside className={'carril aviso' + (aviso ? '' : ' hueco')}>
-            {aviso ? <Link to="/avisos"><AvisoEnmarcado aviso={aviso} /></Link> : <p className="carril-vacio">En esta edición no hay aviso.</p>}
+        {color && (
+          <aside className="carril color">
+            <p className="etiqueta">Nota de color</p>
+            {color.fotoUrl && <img className="foto cuadrada" src={color.fotoUrl} alt="" />}
+            <h3 className="titular chico">{color.titulo}</h3>
+            <Cuerpo texto={color.entradilla} />
           </aside>
         )}
 
-        <section className={'carril breves' + (breves.length ? '' : ' hueco')}>
-          {breves.length > 0 ? (
-            <>
-              <p className="etiqueta">Noticias breves</p>
-              <div className="breves">
-                {breves.map((b) => (
-                  <Link key={b.id} to={`/nota/${b.id}`}>
-                    {b.fotoUrl && <img className="foto" src={b.fotoUrl} alt="" />}
-                    <h4 className="titular chico">{b.titulo}</h4>
-                  </Link>
-                ))}
-              </div>
-            </>
-          ) : <p className="carril-vacio">En esta edición no hay breves.</p>}
-        </section>
+        {avisoPortada && (
+          <aside className="carril aviso">
+            <Link to="/avisos"><AvisoEnmarcado aviso={avisoPortada} /></Link>
+          </aside>
+        )}
+
+        {breves.length > 0 && (
+          <section className="carril breves">
+            <p className="etiqueta">Noticias breves</p>
+            <div className="breves">
+              {breves.map((b) => (
+                <Link key={b.id} to={`/nota/${b.id}`}>
+                  {b.fotoUrl && <img className="foto" src={b.fotoUrl} alt="" />}
+                  <h4 className="titular chico">{b.titulo}</h4>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </>
   )
